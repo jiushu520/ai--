@@ -6,24 +6,21 @@
   <title>现货黄金客户服务首页</title>
   <style>
     :root {
-      --bg: #edf2f6;
-      --paper: #fbfcfe;
-      --paper-strong: #ffffff;
-      --ink: #17202a;
-      --muted: #647282;
-      --line: #d6e0e8;
-      --line-dark: #b8c5d1;
-      --blue: #185ca8;
-      --blue-soft: #e9f2ff;
-      --red: #d83232;
+      --bg: #f4f7fa;
+      --paper: #ffffff;
+      --ink: #1d252d;
+      --muted: #667482;
+      --line: #dfe6ec;
+      --line-dark: #c8d2dc;
+      --blue: #1769e0;
+      --blue-soft: #edf5ff;
+      --red: #e3342f;
       --red-soft: #fff0f0;
-      --green: #078765;
-      --green-soft: #e8f7f1;
-      --amber: #9b6a11;
-      --amber-soft: #fff6dc;
-      --gold: #c3942e;
-      --navy: #152233;
-      --panel-shadow: 0 10px 26px rgba(20, 34, 48, 0.09);
+      --green: #0f9f6e;
+      --green-soft: #eafaf3;
+      --amber: #b97800;
+      --amber-soft: #fff8e6;
+      --panel-shadow: 0 14px 34px rgba(25, 44, 63, 0.08);
     }
 
     * { box-sizing: border-box; }
@@ -32,12 +29,8 @@
       margin: 0;
       min-height: 100vh;
       color: var(--ink);
-      background:
-        linear-gradient(rgba(21, 34, 51, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(21, 34, 51, 0.035) 1px, transparent 1px),
-        var(--bg);
-      background-size: 28px 28px;
-      font-family: "Avenir Next", "DIN Alternate", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      font-family: "PingFang SC", "Microsoft YaHei", "Avenir Next", sans-serif;
       font-size: 14px;
     }
 
@@ -55,23 +48,13 @@
     .date-bar {
       display: flex;
       align-items: center;
-      justify-content: center;
-      min-height: 54px;
+      justify-content: space-between;
+      gap: 18px;
+      min-height: 64px;
       padding: 10px 18px;
       border-bottom: 1px solid var(--line);
-      background:
-        linear-gradient(90deg, rgba(195, 148, 46, 0.12), transparent 28%, rgba(24, 92, 168, 0.08)),
-        var(--paper-strong);
-      box-shadow: 0 5px 18px rgba(20, 34, 48, 0.06);
-      position: relative;
-    }
-
-    .date-bar::before {
-      content: "";
-      position: absolute;
-      inset: 0 0 auto 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--navy), var(--gold), var(--blue));
+      background: var(--paper);
+      box-shadow: 0 2px 10px rgba(25, 44, 63, 0.04);
     }
 
     .brand-block {
@@ -107,7 +90,6 @@
       font-size: 18px;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
-      letter-spacing: 0.08em;
     }
 
     .status-dot {
@@ -122,7 +104,7 @@
       display: grid;
       grid-template-columns: minmax(720px, 1.05fr) minmax(500px, 0.95fr);
       gap: 14px;
-      padding: 14px 16px 16px;
+      padding: 14px;
       min-height: 0;
     }
 
@@ -147,10 +129,10 @@
       gap: 10px;
       padding: 13px;
       background:
-        linear-gradient(120deg, rgba(24, 92, 168, 0.075), transparent 46%),
-        var(--paper-strong);
+        linear-gradient(120deg, rgba(23, 105, 224, 0.08), transparent 44%),
+        var(--paper);
       border: 1px solid var(--line);
-      border-radius: 6px;
+      border-radius: 8px;
       box-shadow: var(--panel-shadow);
     }
 
@@ -197,40 +179,13 @@
     .account-card {
       background: var(--paper);
       border: 1px solid var(--line);
-      border-radius: 6px;
+      border-radius: 8px;
       box-shadow: var(--panel-shadow);
     }
 
     .card {
       min-height: 160px;
       padding: 13px;
-      position: relative;
-      overflow: hidden;
-      background:
-        linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
-    }
-
-    .card::before,
-    .market-card::before,
-    .account-card::before {
-      content: "";
-      position: absolute;
-      inset: 0 0 auto 0;
-      height: 3px;
-      background: var(--blue);
-    }
-
-    .left-grid .card:nth-child(1)::before { background: var(--green); }
-    .left-grid .card:nth-child(2)::before { background: var(--amber); }
-    .left-grid .card:nth-child(3)::before { background: var(--blue); }
-    .left-grid .card:nth-child(4)::before { background: var(--gold); }
-    .left-grid .card:nth-child(5)::before { background: #7a5db4; }
-    .left-grid .card:nth-child(6)::before { background: var(--red); }
-
-    .card:hover,
-    .market-card:hover,
-    .account-card:hover {
-      border-color: var(--line-dark);
     }
 
     .card-title,
@@ -247,7 +202,6 @@
     .card-title strong,
     .panel-title strong {
       font-size: 15px;
-      letter-spacing: 0.01em;
     }
 
     .sub {
@@ -267,7 +221,6 @@
       color: var(--muted);
       font-size: 12px;
       white-space: nowrap;
-      font-weight: 600;
     }
 
     .pill.red {
@@ -302,8 +255,6 @@
     .metric b {
       font-size: 18px;
       font-variant-numeric: tabular-nums;
-      font-family: "DIN Alternate", "Avenir Next", sans-serif;
-      letter-spacing: 0.01em;
     }
 
     .red { color: var(--red); }
@@ -319,7 +270,6 @@
       background: #edf1f5;
       border: 1px solid var(--line);
       margin: 9px 0 11px;
-      box-shadow: inset 0 1px 2px rgba(20, 34, 48, 0.1);
     }
 
     .prob-fill {
@@ -346,7 +296,7 @@
       line-height: 1.45;
       padding: 8px;
       border-radius: 6px;
-      background: linear-gradient(180deg, #ffffff, #f6f9fc);
+      background: #f8fafc;
       border: 1px solid var(--line);
     }
 
@@ -354,7 +304,6 @@
       color: var(--blue);
       font-weight: 700;
       font-variant-numeric: tabular-nums;
-      font-family: "DIN Alternate", "Avenir Next", sans-serif;
     }
 
     .wide-panels {
@@ -388,19 +337,17 @@
       padding: 9px;
       border-radius: 7px;
       border: 1px solid var(--line);
-      background: linear-gradient(180deg, #ffffff, #f7fafc);
+      background: #fbfcfe;
     }
 
     .event-row.important {
       background: var(--amber-soft);
       border-color: #f2d184;
-      box-shadow: inset 3px 0 0 var(--gold);
     }
 
     .flash-row.hot {
       background: var(--red-soft);
       border-color: #ffc6c6;
-      box-shadow: inset 3px 0 0 var(--red);
     }
 
     .flash-row.hot .flash-text {
@@ -426,10 +373,6 @@
       padding: 13px;
       display: grid;
       grid-template-rows: auto auto 1fr;
-      position: relative;
-      overflow: hidden;
-      background:
-        linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
     }
 
     .quote-strip {
@@ -441,25 +384,15 @@
 
     .quote {
       min-width: 0;
-      padding: 7px 6px;
+      padding: 8px;
       border: 1px solid var(--line);
-      border-radius: 6px;
-      background: linear-gradient(180deg, #ffffff, #f6f9fc);
-    }
-
-    .quote:first-child {
-      background: linear-gradient(135deg, var(--navy), #20364f);
-      border-color: #20364f;
-    }
-
-    .quote:first-child .sub,
-    .quote:first-child .value {
-      color: #ffffff;
+      border-radius: 7px;
+      background: #fbfcfe;
     }
 
     .quote .value {
       margin-top: 4px;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -468,7 +401,7 @@
     }
 
     .quote:first-child .value {
-      font-size: 15px;
+      font-size: 18px;
     }
 
     .chart-head {
@@ -507,13 +440,12 @@
       position: relative;
       overflow: hidden;
       border: 1px solid var(--line);
-      border-radius: 6px;
+      border-radius: 7px;
       background:
         linear-gradient(#eef3f7 1px, transparent 1px),
         linear-gradient(90deg, #eef3f7 1px, transparent 1px),
         #ffffff;
       background-size: 100% 58px, 70px 100%;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
     }
 
     #goldChart {
@@ -524,10 +456,6 @@
 
     .account-card {
       padding: 13px;
-      position: relative;
-      overflow: hidden;
-      background:
-        linear-gradient(180deg, #ffffff, #f9fbfd);
     }
 
     .account-grid {
@@ -540,8 +468,8 @@
       min-width: 0;
       padding: 10px;
       border: 1px solid var(--line);
-      border-radius: 6px;
-      background: linear-gradient(180deg, #ffffff, #f6f9fc);
+      border-radius: 7px;
+      background: #fbfcfe;
     }
 
     .account b {
@@ -549,7 +477,6 @@
       margin-top: 5px;
       font-size: 16px;
       font-variant-numeric: tabular-nums;
-      font-family: "DIN Alternate", "Avenir Next", sans-serif;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -564,7 +491,7 @@
       padding: 10px;
       border-radius: 7px;
       border: 1px solid var(--line);
-      background: linear-gradient(180deg, #ffffff, #f7fafc);
+      background: #fbfcfe;
     }
 
     .action-item strong {
@@ -588,6 +515,8 @@
       .date-bar {
         min-height: 52px;
         font-size: 16px;
+        align-items: flex-start;
+        flex-direction: column;
       }
       .main {
         padding: 10px;
@@ -615,15 +544,39 @@
 <body>
   <div class="page">
     <header class="date-bar">
-      <span class="date-text" id="today">----/--/--</span>
+      <div class="brand-block">
+        <div class="brand-name">GoldPilot 黄金交易决策驾驶舱</div>
+        <div class="brand-sub">面向金融客户服务团队的事件驱动型交易辅助首页</div>
+      </div>
+      <div class="date-meta">
+        <span class="pill green">演示模式</span>
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="date-text" id="today">----/--/--</span>
+      </div>
     </header>
 
     <main class="main">
       <section class="left" aria-label="技术面与基本面">
+        <article class="decision-card">
+          <div class="decision-main">
+            <div class="decision-kicker">TODAY DECISION</div>
+            <h1 id="decisionHeadline">纽约盘前，黄金波动放大，等待关键事件确认</h1>
+            <p id="decisionSummary">系统聚合行情、重要数据、美国事件、快讯和账户风险，生成客户服务动作建议。</p>
+          </div>
+          <div class="decision-box">
+            <strong>事件倒计时</strong>
+            <p id="eventCountdown">距离 22:15 重要讲话 --:--:--</p>
+          </div>
+          <div class="decision-box">
+            <strong>AI 解释</strong>
+            <p id="aiReason">上涨概率由短线动量、支撑压力、事件窗口和快讯热度综合生成。</p>
+          </div>
+        </article>
+
         <div class="left-grid">
           <article class="card">
             <div class="card-title">
-              <strong>第一列：上涨 / 下跌概率</strong>
+              <strong>上涨 / 下跌概率</strong>
               <span class="pill">公式待接入</span>
             </div>
             <div class="metric">
@@ -640,7 +593,7 @@
 
           <article class="card">
             <div class="card-title">
-              <strong>第二列：仓位管理警示</strong>
+              <strong>仓位管理警示</strong>
               <span class="pill amber" id="riskLabel">--</span>
             </div>
             <div class="risk-bar"><div class="risk-fill" id="riskBar"></div></div>
@@ -656,7 +609,7 @@
 
           <article class="card">
             <div class="card-title">
-              <strong>第三列：当前行情支撑压力</strong>
+              <strong>当前行情支撑压力</strong>
               <span class="pill blue">现货黄金</span>
             </div>
             <div class="metric">
@@ -675,7 +628,7 @@
 
           <article class="card">
             <div class="card-title">
-              <strong>第四列：当天重要数据</strong>
+              <strong>当天重要数据</strong>
               <span class="pill amber">三星以上</span>
             </div>
             <div class="mini-list" id="dataList"></div>
@@ -683,7 +636,7 @@
 
           <article class="card">
             <div class="card-title">
-              <strong>第五列：当天重要事项</strong>
+              <strong>当天重要事项</strong>
               <span class="pill amber">18:00-05:00</span>
             </div>
             <div class="mini-list" id="eventSummary"></div>
@@ -691,28 +644,12 @@
 
           <article class="card">
             <div class="card-title">
-              <strong>第六列：实时市场快讯</strong>
+              <strong>实时市场快讯</strong>
               <span class="pill red" id="flashState">实时更新</span>
             </div>
             <div class="mini-list" id="flashPreview"></div>
           </article>
         </div>
-
-        <article class="decision-card">
-          <div class="decision-main">
-            <div class="decision-kicker">INVESTOR DEMO LAYER</div>
-            <h1 id="decisionHeadline">纽约盘前，黄金波动放大，等待关键事件确认</h1>
-            <p id="decisionSummary">该模块只用于增强投资人演示，不改变上方六列核心需求。</p>
-          </div>
-          <div class="decision-box">
-            <strong>事件倒计时</strong>
-            <p id="eventCountdown">距离 22:15 重要讲话 --:--:--</p>
-          </div>
-          <div class="decision-box">
-            <strong>AI 解释</strong>
-            <p id="aiReason">上涨概率由短线动量、支撑压力、事件窗口和快讯热度综合生成。</p>
-          </div>
-        </article>
 
         <div class="wide-panels">
           <article class="card feed">
