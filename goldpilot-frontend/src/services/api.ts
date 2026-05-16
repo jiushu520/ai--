@@ -1,6 +1,15 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { API_CONFIG, ApiResponse } from '@/utils/constants';
+import { API_CONFIG } from '@/utils/constants';
 import type { Candle, PriceData, Signal, Account, DailyStats } from '@/types';
+
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
 
 class ApiService {
   private client: AxiosInstance;
@@ -43,44 +52,69 @@ class ApiService {
    * 获取实时价格
    */
   async getPrice(): Promise<PriceData> {
-    const response = await this.client.get<PriceData>('/api/price');
-    return response.data;
+    const response = await this.client.get<ApiResponse<PriceData>>('/api/price');
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.error?.message || '获取价格失败');
   }
 
   /**
    * 获取K线数据
    */
   async getCandles(period: string = '1m', limit: number = 100): Promise<Candle[]> {
-    const response = await this.client.get<Candle[]>('/api/candles', {
+    const response = await this.client.get<ApiResponse<{ candles: Candle[] }>>('/api/candles', {
       params: { period, limit },
     });
-    return response.data;
+
+    if (response.data.success && response.data.data?.candles) {
+      return response.data.data.candles;
+    }
+
+    throw new Error(response.data.error?.message || '获取K线数据失败');
   }
 
   /**
    * 获取信号列表
    */
   async getSignals(date?: string): Promise<Signal[]> {
-    const response = await this.client.get<Signal[]>('/api/signals', {
+    const response = await this.client.get<ApiResponse<{ signals: Signal[] }>>('/api/signals', {
       params: date ? { date } : {},
     });
-    return response.data;
+
+    if (response.data.success && response.data.data?.signals) {
+      return response.data.data.signals;
+    }
+
+    throw new Error(response.data.error?.message || '获取信号列表失败');
   }
 
   /**
    * 获取今日统计
    */
   async getTodayStats(): Promise<DailyStats> {
-    const response = await this.client.get<DailyStats>('/api/stats/today');
-    return response.data;
+    const response = await this.client.get<ApiResponse<DailyStats>>('/api/stats/today');
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.error?.message || '获取今日统计失败');
   }
 
   /**
    * 获取账户信息
    */
   async getAccount(): Promise<Account> {
-    const response = await this.client.get<Account>('/api/account');
-    return response.data;
+    const response = await this.client.get<ApiResponse<Account>>('/api/account');
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.error?.message || '获取账户信息失败');
   }
 }
 
