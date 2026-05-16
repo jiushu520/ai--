@@ -51,6 +51,9 @@ export const updateSignalStatus = asyncHandler(async (req: Request, res: Respons
   const { signalId } = req.params;
   const { status, exitPrice } = req.body;
 
+  // 处理signalId可能是数组的情况
+  const id = Array.isArray(signalId) ? signalId[0] : signalId;
+
   if (!['profit', 'loss'].includes(status)) {
     return res.status(400).json({
       success: false,
@@ -61,7 +64,7 @@ export const updateSignalStatus = asyncHandler(async (req: Request, res: Respons
     });
   }
 
-  const signal = await signalService.updateSignalStatus(signalId, status, exitPrice);
+  const signal = await signalService.updateSignalStatus(id, status, exitPrice);
 
   if (!signal) {
     return res.status(404).json({

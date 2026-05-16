@@ -8,6 +8,8 @@ export interface Candle {
   volume: number;
 }
 
+import { Types } from 'mongoose';
+
 // 价格数据类型
 export interface PriceData {
   symbol: string;
@@ -25,7 +27,7 @@ export type SignalStatus = 'pending' | 'profit' | 'loss';
 export type SignalPeriod = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
 export interface Signal {
-  _id?: string;
+  _id?: Types.ObjectId | string;
   timestamp: Date;
   direction: SignalDirection;
   entryPrice: number;

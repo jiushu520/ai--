@@ -39,7 +39,11 @@ export async function getPrice(req: Request, res: Response): Promise<void> {
  */
 export async function getCandles(req: Request, res: Response): Promise<void> {
   try {
-    const { period = '1m', limit = 100 } = req.query;
+    let { period = '1m', limit = 100 } = req.query;
+
+    // 处理可能是数组的情况
+    period = Array.isArray(period) ? period[0] : period;
+    limit = Array.isArray(limit) ? limit[0] : limit;
 
     // TODO: 从真实行情API获取数据
     // 当前返回模拟数据

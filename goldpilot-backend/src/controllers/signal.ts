@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { SignalModel, DailyStatsModel } from '../models';
 import type { Signal, DailyStats } from '../types';
+import type { FilterQuery } from 'mongoose';
 
 /**
  * 获取信号列表
@@ -9,7 +10,7 @@ export async function getSignals(req: Request, res: Response): Promise<void> {
   try {
     const { date } = req.query;
 
-    const query: any = {};
+    const query: FilterQuery<Signal> = {};
 
     if (date) {
       const startDate = new Date(date as string);
