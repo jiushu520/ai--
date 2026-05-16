@@ -8,6 +8,7 @@ import apiRoutes from './routes/api';
 import { setupWebSocket } from './websocket';
 import { errorHandler, notFoundHandler, requestLogger, detailedRequestLogger } from './middleware';
 import { logger } from './utils';
+import { schedulerService } from './services/scheduler';
 
 const app = express();
 const httpServer = createServer(app);
@@ -65,6 +66,11 @@ async function startServer() {
     setupWebSocket(io);
     logger.info('✅ WebSocket setup completed');
 
+    // 启动定时任务
+    logger.info('⏰ Starting schedulers...');
+    schedulerService.startAll();
+    logger.info('✅ Schedulers started');
+
     // 启动HTTP服务器
     httpServer.listen(PORT, () => {
       logger.info(`🚀 Server started successfully`);
@@ -83,21 +89,26 @@ async function startServer() {
 }
 
 // 优雅关闭
-process.on('SIGTERM', () => {
-  logger.info('⚠️  SIGTERM received, shutting down gracefully...');
-  httpServer.close(() => {
-    logger.info('✅ Server closed');
-    process.exit(0);
-  });
-});
+const gracefulShutdown = (signal: string) => {
+  logger.info(`⚠️  ${signal} received, shutting down gracefully...`);
 
-process.on('SIGINT', () => {
-  logger.info('⚠️  SIGINT received, shutting down gracefully...');
+  // 停止定时任务
+  schedulerService.stopAll();
+
   httpServer.close(() => {
     logger.info('✅ Server closed');
     process.exit(0);
   });
-});
+
+  // 10秒后强制退出
+  setTimeout(() => {
+    logger.error('❌ Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // 启动应用
 startServer();

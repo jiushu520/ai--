@@ -21,6 +21,12 @@ const SignalSchema = new Schema<SignalDocument>({
   exitPrice: {
     type: Number,
   },
+  takeProfit: {
+    type: Number,
+  },
+  stopLoss: {
+    type: Number,
+  },
   profit: {
     type: Number,
   },

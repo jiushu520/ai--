@@ -11,6 +11,12 @@ import {
 import {
   getAccount,
 } from '../controllers/account';
+import {
+  detectSignals,
+  getPendingSignals,
+  updateSignalStatus,
+  cleanupSignals,
+} from '../controllers/signalDetection';
 
 const router = Router();
 
@@ -21,6 +27,10 @@ router.get('/candles', getCandles);
 // 信号相关路由
 router.get('/signals', getSignals);
 router.post('/signals', createSignal);
+router.post('/signals/detect', detectSignals);
+router.get('/signals/pending', getPendingSignals);
+router.put('/signals/:signalId/status', updateSignalStatus);
+router.delete('/signals/cleanup', cleanupSignals);
 router.get('/stats/today', getTodayStats);
 
 // 账户相关路由

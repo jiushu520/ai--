@@ -29,6 +29,8 @@ export interface Signal {
   direction: SignalDirection;
   entryPrice: number;
   exitPrice?: number;
+  takeProfit?: number;
+  stopLoss?: number;
   profit?: number;
   status: SignalStatus;
   period: SignalPeriod;
