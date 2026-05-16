@@ -6,6 +6,8 @@ import cors from 'cors';
 import { connectDatabase } from './config';
 import apiRoutes from './routes/api';
 import { setupWebSocket } from './websocket';
+import { errorHandler, notFoundHandler, requestLogger, detailedRequestLogger } from './middleware';
+import { logger } from './utils';
 
 const app = express();
 const httpServer = createServer(app);
@@ -23,11 +25,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 请求日志
-app.use((req, res, next) => {
-  console.log(`📥 ${req.method} ${req.path}`);
-  next();
-});
+// 请求日志（开发环境显示详细信息）
+if (process.env.NODE_ENV === 'development') {
+  app.use(detailedRequestLogger);
+} else {
+  app.use(requestLogger);
+}
 
 // API路由
 app.use('/api', apiRoutes);
@@ -41,66 +44,57 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 404处理
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: {
-      code: 'NOT_FOUND',
-      message: 'Endpoint not found',
-    },
-  });
-});
+// 404处理（必须在所有路由之后）
+app.use(notFoundHandler);
 
-// 错误处理
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('❌ Error:', err);
-  res.status(err.status || 500).json({
-    success: false,
-    error: {
-      code: err.code || 'INTERNAL_ERROR',
-      message: err.message || 'Internal server error',
-    },
-  });
-});
+// 全局错误处理（必须在最后）
+app.use(errorHandler);
 
 // 启动服务器
 async function startServer() {
   try {
-    console.log('🔧 Starting server...');
+    logger.info('🔧 Starting server...');
 
     // 连接数据库
-    console.log('📡 Connecting to database...');
+    logger.info('📡 Connecting to database...');
     await connectDatabase();
-    console.log('✅ Database connection completed');
+    logger.info('✅ Database connection completed');
 
     // 设置WebSocket
-    console.log('🔌 Setting up WebSocket...');
+    logger.info('🔌 Setting up WebSocket...');
     setupWebSocket(io);
-    console.log('✅ WebSocket setup completed');
+    logger.info('✅ WebSocket setup completed');
 
     // 启动HTTP服务器
     httpServer.listen(PORT, () => {
-      console.log('🚀 Server started successfully');
-      console.log(`📍 HTTP Server: http://localhost:${PORT}`);
-      console.log(`📍 WebSocket Server: ws://localhost:${PORT}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log('✅ Server is ready to accept connections');
+      logger.info(`🚀 Server started successfully`);
+      logger.info(`📍 HTTP Server: http://localhost:${PORT}`);
+      logger.info(`📍 WebSocket Server: ws://localhost:${PORT}`);
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info('✅ Server is ready to accept connections');
     }).on('error', (error: any) => {
-      console.error('❌ HTTP Server error:', error);
+      logger.error('❌ HTTP Server error:', error);
       throw error;
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    logger.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 }
 
 // 优雅关闭
 process.on('SIGTERM', () => {
-  console.log('⚠️  SIGTERM received, shutting down gracefully...');
+  logger.info('⚠️  SIGTERM received, shutting down gracefully...');
   httpServer.close(() => {
-    console.log('✅ Server closed');
+    logger.info('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  logger.info('⚠️  SIGINT received, shutting down gracefully...');
+  httpServer.close(() => {
+    logger.info('✅ Server closed');
     process.exit(0);
   });
 });

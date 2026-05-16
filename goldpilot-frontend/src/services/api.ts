@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { API_CONFIG } from '@/utils/constants';
+import { logger } from '@/utils/logger';
 import type { Candle, PriceData, Signal, Account, DailyStats } from '@/types';
 
 interface ApiResponse<T> {
@@ -26,11 +27,13 @@ class ApiService {
     // 请求拦截器
     this.client.interceptors.request.use(
       (config) => {
-        console.log('[API Request]', config.method?.toUpperCase(), config.url);
+        const startTime = Date.now();
+        config.metadata = { startTime };
+        logger.debug(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
         return config;
       },
       (error) => {
-        console.error('[API Request Error]', error);
+        logger.error('[API Request Error]', error);
         return Promise.reject(error);
       }
     );
@@ -38,11 +41,38 @@ class ApiService {
     // 响应拦截器
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
-        console.log('[API Response]', response.status, response.config.url);
+        const duration = Date.now() - (response.config.metadata?.startTime || Date.now());
+        logger.api(
+          response.config.method?.toUpperCase() || 'GET',
+          response.config.url || '',
+          response.status,
+          duration
+        );
         return response;
       },
       (error) => {
-        console.error('[API Response Error]', error.response?.status, error.config?.url);
+        const duration = Date.now() - (error.config?.metadata?.startTime || Date.now());
+        logger.error(
+          `[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.response?.status || 'NETWORK_ERROR'} (${duration}ms)`
+        );
+
+        // 处理不同的错误状态码
+        if (error.response) {
+          // 服务器响应了错误状态码
+          const status = error.response.status;
+          if (status >= 500) {
+            logger.error(`Server Error (${status}):`, error.response.data);
+          } else if (status >= 400) {
+            logger.warn(`Client Error (${status}):`, error.response.data);
+          }
+        } else if (error.request) {
+          // 请求已发出但没有收到响应
+          logger.error('Network Error - No response received');
+        } else {
+          // 请求配置出错
+          logger.error('Request Config Error:', error.message);
+        }
+
         return Promise.reject(error);
       }
     );
