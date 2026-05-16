@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, MarkerPosition, MarkerShape } from 'lightweight-charts';
+import { useEffect, useRef } from 'react';
+import { createChart, type IChartApi, type ISeriesApi, type CandlestickData, type Time } from 'lightweight-charts';
 import type { Candle, Signal } from '@/types';
 
 interface ChartProps {
@@ -53,7 +53,7 @@ export function Chart({ candles, signals, period, onPeriodChange }: ChartProps) 
     });
 
     // 添加K线系列
-    const candlestickSeries = chart.addCandlestickSeries({
+    const candlestickSeries = (chart as any).addCandlestickSeries({
       upColor: '#0f9f6e',
       downColor: '#e3342f',
       borderVisible: false,
@@ -108,9 +108,9 @@ export function Chart({ candles, signals, period, onPeriodChange }: ChartProps) 
       const time = (new Date(signal.timestamp).getTime() / 1000) as Time;
 
       // 根据信号方向和状态设置标记样式
-      let position: MarkerPosition;
+      let position: 'aboveBar' | 'belowBar';
       let color: string;
-      let shape: MarkerShape;
+      let shape: 'arrowUp' | 'arrowDown';
       let text: string;
 
       if (signal.direction === 'long') {
@@ -154,7 +154,7 @@ export function Chart({ candles, signals, period, onPeriodChange }: ChartProps) 
       };
     });
 
-    seriesRef.current.setMarkers(markers);
+    (seriesRef.current as any).setMarkers(markers);
   }, [signals, period]);
 
   return (

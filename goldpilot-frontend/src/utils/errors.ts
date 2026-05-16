@@ -6,13 +6,18 @@ import type { ApiResponse } from '@/types';
  * API错误类
  */
 export class ApiError extends Error {
+  code: string;
+  statusCode: number;
+
   constructor(
-    public code: string,
-    public statusCode: number,
+    code: string,
+    statusCode: number,
     message: string
   ) {
     super(message);
     this.name = 'ApiError';
+    this.code = code;
+    this.statusCode = statusCode;
   }
 }
 

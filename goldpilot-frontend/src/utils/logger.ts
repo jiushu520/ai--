@@ -2,12 +2,14 @@
  * 前端日志工具
  */
 
-enum LogLevel {
-  ERROR = 'ERROR',
-  WARN = 'WARN',
-  INFO = 'INFO',
-  DEBUG = 'DEBUG',
-}
+const LogLevel = {
+  ERROR: 'ERROR',
+  WARN: 'WARN',
+  INFO: 'INFO',
+  DEBUG: 'DEBUG',
+} as const;
+
+type LogLevelType = typeof LogLevel[keyof typeof LogLevel];
 
 class Logger {
   private isDevelopment = import.meta.env.DEV;
@@ -22,7 +24,7 @@ class Logger {
   /**
    * 格式化日志消息
    */
-  private format(level: LogLevel, message: string, meta?: any): string {
+  private format(level: LogLevelType, message: string, meta?: any): string {
     const timestamp = this.getTimestamp();
     const metaStr = meta ? ` ${JSON.stringify(meta)}` : '';
     return `[${timestamp}] [${level}] ${message}${metaStr}`;

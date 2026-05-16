@@ -10,7 +10,6 @@ interface AccountCardProps {
  */
 export function AccountCard({ data }: AccountCardProps) {
   const {
-    balance,
     equity,
     freeMargin,
     positions,

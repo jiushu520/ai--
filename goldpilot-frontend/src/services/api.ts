@@ -1,4 +1,5 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios from 'axios';
+import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { API_CONFIG } from '@/utils/constants';
 import { logger } from '@/utils/logger';
 import type { Candle, PriceData, Signal, Account, DailyStats } from '@/types';
@@ -9,6 +10,12 @@ interface ApiResponse<T> {
   error?: {
     code: string;
     message: string;
+  };
+}
+
+interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
+  metadata?: {
+    startTime: number;
   };
 }
 
@@ -28,7 +35,7 @@ class ApiService {
     this.client.interceptors.request.use(
       (config) => {
         const startTime = Date.now();
-        config.metadata = { startTime };
+        (config as ExtendedAxiosRequestConfig).metadata = { startTime };
         logger.debug(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
         return config;
       },
@@ -41,7 +48,7 @@ class ApiService {
     // 响应拦截器
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
-        const duration = Date.now() - (response.config.metadata?.startTime || Date.now());
+        const duration = Date.now() - ((response.config as ExtendedAxiosRequestConfig).metadata?.startTime || Date.now());
         logger.api(
           response.config.method?.toUpperCase() || 'GET',
           response.config.url || '',
@@ -51,7 +58,7 @@ class ApiService {
         return response;
       },
       (error) => {
-        const duration = Date.now() - (error.config?.metadata?.startTime || Date.now());
+        const duration = Date.now() - ((error.config as ExtendedAxiosRequestConfig)?.metadata?.startTime || Date.now());
         logger.error(
           `[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.response?.status || 'NETWORK_ERROR'} (${duration}ms)`
         );

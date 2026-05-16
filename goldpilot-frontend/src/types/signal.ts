@@ -4,10 +4,11 @@ import type { Signal, DailyStats } from './index';
  * 创建默认信号数据
  */
 export function createDefaultSignals(): Signal[] {
+  const now = new Date();
   return [
     {
       id: '1',
-      timestamp: new Date().setHours(10, 23, 0, 0),
+      timestamp: new Date(now.setHours(10, 23, 0, 0)),
       direction: 'long',
       entryPrice: 2380.50,
       exitPrice: 2388.50,
@@ -18,7 +19,7 @@ export function createDefaultSignals(): Signal[] {
     },
     {
       id: '2',
-      timestamp: new Date().setHours(11, 45, 0, 0),
+      timestamp: new Date(new Date().setHours(11, 45, 0, 0)),
       direction: 'short',
       entryPrice: 2390.00,
       exitPrice: 2385.00,
@@ -29,7 +30,7 @@ export function createDefaultSignals(): Signal[] {
     },
     {
       id: '3',
-      timestamp: new Date().setHours(13, 12, 0, 0),
+      timestamp: new Date(new Date().setHours(13, 12, 0, 0)),
       direction: 'long',
       entryPrice: 2382.00,
       exitPrice: 2378.00,
@@ -40,7 +41,7 @@ export function createDefaultSignals(): Signal[] {
     },
     {
       id: '4',
-      timestamp: new Date().setHours(14, 30, 0, 0),
+      timestamp: new Date(new Date().setHours(14, 30, 0, 0)),
       direction: 'short',
       entryPrice: 2388.50,
       status: 'pending',

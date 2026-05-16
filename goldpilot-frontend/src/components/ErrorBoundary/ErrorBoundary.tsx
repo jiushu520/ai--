@@ -1,4 +1,4 @@
-import { Component, ReactNode } from 'react';
+import { Component, type ReactNode } from 'react';
 import { Result, Button } from 'antd';
 import { logger } from '@/utils/logger';
 

@@ -45,7 +45,7 @@ function App() {
 
   // 事件数据
   const [events] = useState(createDefaultEvents());
-  const [flashes, setFlashes] = useState(createDefaultFlashes());
+  const [flashes] = useState(createDefaultFlashes());
 
   // 决策数据
   const decisionData = createDefaultDecisionData();
