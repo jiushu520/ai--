@@ -578,7 +578,7 @@
         <div class="brand-sub">面向金融客户服务团队的事件驱动型交易辅助首页</div>
       </div>
       <div class="date-meta">
-        <span class="pill green">演示模式</span>
+        <span class="pill green"><span class="pulse"></span>实时模式</span>
         <span class="status-dot" aria-hidden="true"></span>
         <span class="date-text" id="today">----/--/--</span>
       </div>
@@ -966,7 +966,6 @@
 
     // --- 从 Finnhub 获取实时市场新闻 ---
     async function fetchRealNews() {
-      if (!apiConnected) return;
       try {
         const resp = await fetch(`${FINNHUB_BASE}/news?category=forex&token=${FINNHUB_API_KEY}`);
         if (!resp.ok) throw new Error(`News API ${resp.status}`);
@@ -999,7 +998,6 @@
 
     // --- 从 Finnhub 获取经济日历 ---
     async function fetchEconomicCalendar() {
-      if (!apiConnected) return;
       try {
         const today = new Date();
         const resp = await fetch(`${FINNHUB_BASE}/calendar/economic?token=${FINNHUB_API_KEY}`);
@@ -1032,7 +1030,7 @@
     // 实时模式下推送真实新闻为新快讯
     let lastNewsCount = 0;
     async function pollNewNews() {
-      if (!apiConnected || !newsConnected) return;
+      if (!newsConnected) return;
       try {
         const resp = await fetch(`${FINNHUB_BASE}/news?category=forex&token=${FINNHUB_API_KEY}`);
         if (!resp.ok) return;
@@ -1096,9 +1094,6 @@
           candles = buildCandles(86, livePrice.price);
           cachedSignals = calculateSignals();
           updateStatusBar();
-          // 连接成功后立即获取新闻和经济日历
-          fetchRealNews();
-          fetchEconomicCalendar();
         }
         console.log('[GoldAPI] 实时价格:', livePrice.price);
       } catch (err) {
@@ -1112,11 +1107,11 @@
       if (apiConnected && newsConnected) {
         pill.innerHTML = '<span class="pulse"></span>实时行情+新闻';
         pill.className = 'pill green';
-      } else if (apiConnected) {
-        pill.textContent = '实时行情';
+      } else if (apiConnected || newsConnected) {
+        pill.innerHTML = '<span class="pulse"></span>实时模式';
         pill.className = 'pill green';
       } else {
-        pill.textContent = '演示模式';
+        pill.innerHTML = '<span class="pulse"></span>连接中...';
         pill.className = 'pill amber';
       }
     }
@@ -1512,7 +1507,7 @@
       updateStatusBar();
       bind();
 
-      // 初始化消息面数据
+      // 初始化消息面数据（先用模拟数据占位，API返回后自动替换）
       seedMessages();
       renderEvents();
       renderFlashes();
@@ -1520,21 +1515,24 @@
       renderCountdown();
       drawChart();
 
-      // 获取实时行情（首次立即调用，之后每60秒）
+      // 立即获取实时行情
       fetchGoldPrice();
       setInterval(fetchGoldPrice, API_FETCH_INTERVAL);
+
+      // 立即获取实时新闻和经济日历（不依赖行情API）
+      fetchRealNews();
+      fetchEconomicCalendar();
+      setInterval(fetchRealNews, NEWS_FETCH_INTERVAL);
+      setInterval(fetchEconomicCalendar, 300000);
 
       // 每4秒更新K线（微波动）
       setInterval(updateMarket, 4000);
 
-      // 每8-15秒新增一条快讯
-      // 实时模式：从Finnhub拉取真实新闻；演示模式：模板模拟
+      // 每8-15秒检查新快讯
       function pushNewFlash() {
         if (newsConnected) {
-          // 实时模式：轮询Finnhub看是否有新新闻
           pollNewNews();
         } else {
-          // 演示模式：模板生成模拟快讯
           const newMsg = generateFlash();
           flashMessages.unshift(newMsg);
           if (flashMessages.length > 30) flashMessages.pop();
@@ -1542,35 +1540,13 @@
           renderFlashes(newIds);
           renderSignals();
         }
-        // 随机间隔8-15秒
         setTimeout(pushNewFlash, 8000 + Math.random() * 7000);
       }
       setTimeout(pushNewFlash, 5000);
 
-      // 定期刷新新闻（实时模式下2分钟拉一次全量）
-      setInterval(() => {
-        if (apiConnected) fetchRealNews();
-      }, NEWS_FETCH_INTERVAL);
-
-      // 每5分钟刷新经济数据
-      setInterval(() => {
-        if (apiConnected) {
-          fetchEconomicCalendar();
-        } else {
-          currentImportantData = generateEconomicData();
-          renderEvents();
-        }
-      }, 300000);
-
       // 每10分钟刷新事件
       setInterval(() => {
-        if (apiConnected) {
-          fetchEconomicCalendar();
-        } else {
-          currentImportantEvents = generateEvents();
-          renderEvents();
-          renderSignals();
-        }
+        fetchEconomicCalendar();
       }, 600000);
 
       setInterval(renderCountdown, 1000);
