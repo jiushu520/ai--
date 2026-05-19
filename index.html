@@ -396,6 +396,23 @@
       line-height: 1.48;
     }
 
+    .news-link {
+      color: var(--ink);
+      text-decoration: none;
+      line-height: 1.48;
+      cursor: pointer;
+    }
+    .news-link:hover {
+      color: var(--blue);
+      text-decoration: underline;
+    }
+
+    .news-meta {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
     .market-card {
       flex: 1;
       min-height: 460px;
@@ -875,6 +892,14 @@
       const d = cnNow();
       return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
     }
+    function cnDateTimeStr(date) {
+      const d = date || cnNow();
+      const mon = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const h = String(d.getHours()).padStart(2, '0');
+      const m = String(d.getMinutes()).padStart(2, '0');
+      return `${mon}/${day} ${h}:${m}`;
+    }
     function cnTimestamp(utcSeconds) {
       // UTC时间戳 -> UTC+8 Date对象
       const utc = new Date(utcSeconds * 1000);
@@ -973,114 +998,140 @@
     const GOLD_API_KEY = 'goldapi-a9eecb56e05d32c2cf54a19013a9c3a6-io';
     const API_FETCH_INTERVAL = 60000; // 60秒调用一次，300次/月够用
 
-    // --- 实时新闻API配置 (Finnhub 免费版) ---
-    // 免费注册获取key: https://finnhub.io/register
-    const FINNHUB_API_KEY = 'csjqc19r01qtjnqptlc0csjqc19r01qtjnqptlcg';
-    const FINNHUB_BASE = 'https://finnhub.io/api/v1';
+    // --- 实时新闻API配置 (多源聚合，无需API key) ---
+    const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
     const NEWS_FETCH_INTERVAL = 120000; // 2分钟刷新一次新闻
+    const NEWS_SOURCES = [
+      {
+        name: 'Google News',
+        url: encodeURIComponent('https://news.google.com/rss/search?q=gold+price+XAUUSD&hl=en-US&gl=US&ceid=US:en'),
+      },
+      {
+        name: 'Investing.com',
+        url: encodeURIComponent('https://www.investing.com/rss/news_301.rss'),
+      },
+    ];
 
     let livePrice = null; // 实时价格数据（来自API）
     let apiConnected = false;
-    let realNews = [];     // 来自Finnhub的真实新闻
-    let realCalendar = []; // 来自Finnhub的经济日历
+    let realNews = [];     // 来自真实新闻源
     let newsConnected = false;
 
-    // --- 从 Finnhub 获取实时市场新闻 ---
+    // --- 从 Google News RSS 获取真实黄金新闻 ---
     async function fetchRealNews() {
-      try {
-        const resp = await fetch(`${FINNHUB_BASE}/news?category=forex&token=${FINNHUB_API_KEY}`);
-        if (!resp.ok) throw new Error(`News API ${resp.status}`);
-        const data = await resp.json();
-        if (Array.isArray(data) && data.length > 0) {
-          realNews = data.map(item => ({
-            time: cnTimestamp(item.datetime),
-            hot: item.sentiment && item.sentiment !== 'neutral',
-            text: item.headline,
-            url: item.url,
-            source: item.source,
-            id: ++flashIdCounter,
-          }));
-          newsConnected = true;
-          console.log('[Finnhub] 获取新闻:', realNews.length, '条');
-          // 用真实新闻替换模拟快讯
-          flashMessages = realNews.slice(0, 20).map(n => ({
-            ...n,
-            time: cnTimeStr(n.time),
-            hot: true,
-          }));
-          renderFlashes();
-          renderSignals();
-          updateStatusBar();
-        }
-      } catch (err) {
-        console.warn('[Finnhub News] 获取失败:', err.message);
-      }
-    }
+      // 尝试多个源，哪个成功用哪个
+      for (const src of NEWS_SOURCES) {
+        try {
+          const proxyUrl = `${CORS_PROXY}${src.url}`;
+          const resp = await fetch(proxyUrl);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const xmlText = await resp.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(xmlText, 'text/xml');
+          const items = doc.querySelectorAll('item');
+          if (items.length === 0) continue;
 
-    // --- 从 Finnhub 获取经济日历 ---
-    async function fetchEconomicCalendar() {
-      try {
-        const today = new Date();
-        const resp = await fetch(`${FINNHUB_BASE}/calendar/economic?token=${FINNHUB_API_KEY}`);
-        if (!resp.ok) throw new Error(`Calendar API ${resp.status}`);
-        const data = await resp.json();
-        if (data.economicCalendar && data.economicCalendar.length > 0) {
-          // 过滤今日数据，按重要性筛选
-          realCalendar = data.economicCalendar
-            .filter(item => item.impact === 'high' || item.impact === 'medium')
-            .slice(0, 6)
-            .map(item => ({
-              time: item.time || '--:--',
-              star: item.impact === 'high' ? '⭐⭐⭐⭐' : '⭐⭐⭐',
-              text: `${item.country || 'US'} ${item.event || item.name || '经济数据'}`,
-              actual: item.actual,
-              forecast: item.forecast,
-              previous: item.prev,
-            }));
-          if (realCalendar.length > 0) {
-            currentImportantData = realCalendar;
-            renderEvents();
-            console.log('[Finnhub] 经济日历:', realCalendar.length, '条');
+          const parsed = [];
+          items.forEach((item, i) => {
+            if (i >= 25) return;
+            const title = item.querySelector('title')?.textContent || '';
+            const link = item.querySelector('link')?.textContent || '';
+            const pubDate = item.querySelector('pubDate')?.textContent || '';
+            const sourceEl = item.querySelector('source');
+            const sourceName = sourceEl?.textContent || src.name;
+            let t = cnNow();
+            if (pubDate) {
+              const parsed = new Date(pubDate);
+              if (!isNaN(parsed.getTime())) {
+                const utc = parsed.getTime() + parsed.getTimezoneOffset() * 60000;
+                t = new Date(utc + TZ_OFFSET * 3600000);
+              }
+            }
+            // 过滤掉空标题
+            if (!title.trim()) return;
+            parsed.push({
+              datetime: t,
+              time: cnDateTimeStr(t),
+              hot: i < 8, // 前8条标为热门
+              text: title.trim(),
+              url: link.trim(),
+              source: sourceName,
+              id: ++flashIdCounter,
+            });
+          });
+
+          if (parsed.length > 0) {
+            realNews = parsed;
+            newsConnected = true;
+            console.log(`[News] ${src.name} 获取:`, parsed.length, '条');
+            flashMessages = parsed.slice(0, 20);
+            renderFlashes();
+            renderSignals();
+            updateStatusBar();
+            return; // 成功就不再尝试其他源
           }
+        } catch (err) {
+          console.warn(`[News] ${src.name} 失败:`, err.message);
         }
-      } catch (err) {
-        console.warn('[Finnhub Calendar] 获取失败:', err.message);
       }
+      // 所有源都失败，保持模拟数据
+      console.warn('[News] 所有源失败，使用模拟数据');
     }
 
-    // 实时模式下推送真实新闻为新快讯
+    // 定时轮询新新闻
     let lastNewsCount = 0;
     async function pollNewNews() {
       if (!newsConnected) return;
       try {
-        const resp = await fetch(`${FINNHUB_BASE}/news?category=forex&token=${FINNHUB_API_KEY}`);
+        const src = NEWS_SOURCES[0]; // 用第一个源轮询
+        const proxyUrl = `${CORS_PROXY}${src.url}&_=${Date.now()}`;
+        const resp = await fetch(proxyUrl);
         if (!resp.ok) return;
-        const data = await resp.json();
-        if (Array.isArray(data) && data.length > lastNewsCount) {
-          // 有新新闻，取最新的
-          const newItems = data.slice(0, data.length - lastNewsCount);
-          newItems.reverse().forEach(item => {
-            const t = cnTimestamp(item.datetime);
-            const msg = {
-              time: cnTimeStr(t),
-              hot: true,
-              text: item.headline,
-              url: item.url,
-              source: item.source,
-              id: ++flashIdCounter,
-            };
-            flashMessages.unshift(msg);
+        const xmlText = await resp.text();
+        const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+        const items = doc.querySelectorAll('item');
+        if (items.length > lastNewsCount && lastNewsCount > 0) {
+          const newItems = [];
+          items.forEach((item, i) => {
+            if (i >= items.length - lastNewsCount) return;
+            const title = item.querySelector('title')?.textContent || '';
+            const link = item.querySelector('link')?.textContent || '';
+            const pubDate = item.querySelector('pubDate')?.textContent || '';
+            const sourceEl = item.querySelector('source');
+            const sourceName = sourceEl?.textContent || src.name;
+            let t = cnNow();
+            if (pubDate) {
+              const p = new Date(pubDate);
+              if (!isNaN(p.getTime())) {
+                const utc = p.getTime() + p.getTimezoneOffset() * 60000;
+                t = new Date(utc + TZ_OFFSET * 3600000);
+              }
+            }
+            if (title.trim()) {
+              newItems.push({
+                datetime: t,
+                time: cnDateTimeStr(t),
+                hot: true,
+                text: title.trim(),
+                url: link.trim(),
+                source: sourceName,
+                id: ++flashIdCounter,
+              });
+            }
           });
-          if (flashMessages.length > 30) flashMessages = flashMessages.slice(0, 30);
-          lastNewsCount = data.length;
-          const newIds = new Set(flashMessages.slice(0, newItems.length).map(m => m.id));
-          renderFlashes(newIds);
-          renderSignals();
+          if (newItems.length > 0) {
+            newItems.forEach(msg => flashMessages.unshift(msg));
+            if (flashMessages.length > 30) flashMessages = flashMessages.slice(0, 30);
+            lastNewsCount = items.length;
+            const newIds = new Set(flashMessages.slice(0, newItems.length).map(m => m.id));
+            renderFlashes(newIds);
+            renderSignals();
+          }
         } else {
-          lastNewsCount = data.length;
+          lastNewsCount = items.length;
         }
       } catch (err) {
-        // 静默失败，不影响界面
+        // 静默失败
       }
     }
 
@@ -1326,9 +1377,18 @@
         const time = document.createElement('div');
         time.className = 'mini-time';
         time.textContent = item.time;
-        const text = document.createElement('div');
-        text.textContent = `${item.star ? item.star + ' ' : ''}${item.text}`;
-        row.append(time, text);
+        const right = document.createElement('div');
+        const headline = item.url
+          ? (() => { const a = document.createElement('a'); a.href = item.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.className = 'news-link'; a.textContent = `${item.star ? item.star + ' ' : ''}${item.text}`; return a; })()
+          : document.createTextNode(`${item.star ? item.star + ' ' : ''}${item.text}`);
+        right.appendChild(headline);
+        if (item.source) {
+          const meta = document.createElement('div');
+          meta.className = 'news-meta';
+          meta.textContent = item.source;
+          right.appendChild(meta);
+        }
+        row.append(time, right);
         box.appendChild(row);
       });
     }
@@ -1364,10 +1424,18 @@
         const time = document.createElement('div');
         time.className = 'row-time';
         time.textContent = item.time;
-        const text = document.createElement('div');
-        text.className = 'flash-text';
-        text.textContent = item.text;
-        row.append(time, text);
+        const right = document.createElement('div');
+        const headline = item.url
+          ? (() => { const a = document.createElement('a'); a.href = item.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.className = 'news-link'; a.textContent = item.text; return a; })()
+          : document.createTextNode(item.text);
+        right.appendChild(headline);
+        if (item.source) {
+          const meta = document.createElement('div');
+          meta.className = 'news-meta';
+          meta.textContent = item.source;
+          right.appendChild(meta);
+        }
+        row.append(time, right);
         list.appendChild(row);
       });
       // 自动滚动到顶部显示最新消息
@@ -1533,11 +1601,9 @@
       fetchGoldPrice();
       setInterval(fetchGoldPrice, API_FETCH_INTERVAL);
 
-      // 立即获取实时新闻和经济日历（不依赖行情API）
+      // 立即获取实时新闻（不依赖行情API）
       fetchRealNews();
-      fetchEconomicCalendar();
       setInterval(fetchRealNews, NEWS_FETCH_INTERVAL);
-      setInterval(fetchEconomicCalendar, 300000);
 
       // 每4秒更新K线（微波动）
       setInterval(updateMarket, 4000);
@@ -1558,9 +1624,10 @@
       }
       setTimeout(pushNewFlash, 5000);
 
-      // 每10分钟刷新事件
+      // 每10分钟刷新经济数据
       setInterval(() => {
-        fetchEconomicCalendar();
+        currentImportantData = generateEconomicData();
+        renderEvents();
       }, 600000);
 
       setInterval(renderCountdown, 1000);
