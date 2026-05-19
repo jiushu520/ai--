@@ -998,18 +998,14 @@
     const GOLD_API_KEY = 'goldapi-a9eecb56e05d32c2cf54a19013a9c3a6-io';
     const API_FETCH_INTERVAL = 60000; // 60秒调用一次，300次/月够用
 
-    // --- 实时新闻API配置 (多源聚合，无需API key) ---
-    const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+    // --- 实时新闻API配置 (中文黄金新闻，无需API key) ---
+    const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
     const NEWS_FETCH_INTERVAL = 120000; // 2分钟刷新一次新闻
     const NEWS_SOURCES = [
-      {
-        name: 'Google News',
-        url: encodeURIComponent('https://news.google.com/rss/search?q=gold+price+XAUUSD&hl=en-US&gl=US&ceid=US:en'),
-      },
-      {
-        name: 'Investing.com',
-        url: encodeURIComponent('https://www.investing.com/rss/news_301.rss'),
-      },
+      // 中文黄金新闻（优先）
+      'https://news.google.com/rss/search?q=%E9%BB%84%E9%87%91+%E4%BB%B7%E6%A0%BC&hl=zh-CN&gl=CN&ceid=CN%3Azh-Hans',
+      // 英文黄金新闻（备选）
+      'https://news.google.com/rss/search?q=gold+price+XAUUSD&hl=en-US&gl=US&ceid=US%3Aen',
     ];
 
     let livePrice = null; // 实时价格数据（来自API）
@@ -1017,64 +1013,57 @@
     let realNews = [];     // 来自真实新闻源
     let newsConnected = false;
 
-    // --- 从 Google News RSS 获取真实黄金新闻 ---
+    // --- 从 Google News 获取中文黄金新闻 ---
     async function fetchRealNews() {
-      // 尝试多个源，哪个成功用哪个
-      for (const src of NEWS_SOURCES) {
+      for (const rssUrl of NEWS_SOURCES) {
         try {
-          const proxyUrl = `${CORS_PROXY}${src.url}`;
-          const resp = await fetch(proxyUrl);
+          const resp = await fetch(`${RSS2JSON}${encodeURIComponent(rssUrl)}`);
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const xmlText = await resp.text();
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(xmlText, 'text/xml');
-          const items = doc.querySelectorAll('item');
-          if (items.length === 0) continue;
+          const data = await resp.json();
+          if (data.status !== 'ok' || !data.items || data.items.length === 0) continue;
 
-          const parsed = [];
-          items.forEach((item, i) => {
-            if (i >= 25) return;
-            const title = item.querySelector('title')?.textContent || '';
-            const link = item.querySelector('link')?.textContent || '';
-            const pubDate = item.querySelector('pubDate')?.textContent || '';
-            const sourceEl = item.querySelector('source');
-            const sourceName = sourceEl?.textContent || src.name;
+          const parsed = data.items.slice(0, 25).map((item, i) => {
             let t = cnNow();
-            if (pubDate) {
-              const parsed = new Date(pubDate);
-              if (!isNaN(parsed.getTime())) {
-                const utc = parsed.getTime() + parsed.getTimezoneOffset() * 60000;
+            if (item.pubDate) {
+              const p = new Date(item.pubDate);
+              if (!isNaN(p.getTime())) {
+                const utc = p.getTime() + p.getTimezoneOffset() * 60000;
                 t = new Date(utc + TZ_OFFSET * 3600000);
               }
             }
-            // 过滤掉空标题
-            if (!title.trim()) return;
-            parsed.push({
+            // 从标题中提取来源，如 "标题 - 来源"
+            let title = item.title || '';
+            let sourceName = item.author || '';
+            const dashIdx = title.lastIndexOf(' - ');
+            if (dashIdx > 0) {
+              sourceName = title.slice(dashIdx + 3).trim();
+              title = title.slice(0, dashIdx).trim();
+            }
+            return {
               datetime: t,
               time: cnDateTimeStr(t),
-              hot: i < 8, // 前8条标为热门
-              text: title.trim(),
-              url: link.trim(),
+              hot: i < 8,
+              text: title,
+              url: item.link || '',
               source: sourceName,
               id: ++flashIdCounter,
-            });
-          });
+            };
+          }).filter(n => n.text);
 
           if (parsed.length > 0) {
             realNews = parsed;
             newsConnected = true;
-            console.log(`[News] ${src.name} 获取:`, parsed.length, '条');
+            console.log('[News] 获取新闻:', parsed.length, '条', parsed[0].source ? `(来源: ${parsed[0].source})` : '');
             flashMessages = parsed.slice(0, 20);
             renderFlashes();
             renderSignals();
             updateStatusBar();
-            return; // 成功就不再尝试其他源
+            return;
           }
         } catch (err) {
-          console.warn(`[News] ${src.name} 失败:`, err.message);
+          console.warn('[News] 获取失败:', err.message);
         }
       }
-      // 所有源都失败，保持模拟数据
       console.warn('[News] 所有源失败，使用模拟数据');
     }
 
@@ -1083,37 +1072,37 @@
     async function pollNewNews() {
       if (!newsConnected) return;
       try {
-        const src = NEWS_SOURCES[0]; // 用第一个源轮询
-        const proxyUrl = `${CORS_PROXY}${src.url}&_=${Date.now()}`;
-        const resp = await fetch(proxyUrl);
+        const rssUrl = NEWS_SOURCES[0];
+        const resp = await fetch(`${RSS2JSON}${encodeURIComponent(rssUrl)}&_=${Date.now()}`);
         if (!resp.ok) return;
-        const xmlText = await resp.text();
-        const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
-        const items = doc.querySelectorAll('item');
-        if (items.length > lastNewsCount && lastNewsCount > 0) {
+        const data = await resp.json();
+        if (data.status !== 'ok' || !data.items) return;
+        const currentCount = data.items.length;
+        if (currentCount > lastNewsCount && lastNewsCount > 0) {
           const newItems = [];
-          items.forEach((item, i) => {
-            if (i >= items.length - lastNewsCount) return;
-            const title = item.querySelector('title')?.textContent || '';
-            const link = item.querySelector('link')?.textContent || '';
-            const pubDate = item.querySelector('pubDate')?.textContent || '';
-            const sourceEl = item.querySelector('source');
-            const sourceName = sourceEl?.textContent || src.name;
+          data.items.slice(0, currentCount - lastNewsCount).forEach(item => {
+            let title = item.title || '';
+            let sourceName = item.author || '';
+            const dashIdx = title.lastIndexOf(' - ');
+            if (dashIdx > 0) {
+              sourceName = title.slice(dashIdx + 3).trim();
+              title = title.slice(0, dashIdx).trim();
+            }
             let t = cnNow();
-            if (pubDate) {
-              const p = new Date(pubDate);
+            if (item.pubDate) {
+              const p = new Date(item.pubDate);
               if (!isNaN(p.getTime())) {
                 const utc = p.getTime() + p.getTimezoneOffset() * 60000;
                 t = new Date(utc + TZ_OFFSET * 3600000);
               }
             }
-            if (title.trim()) {
+            if (title) {
               newItems.push({
                 datetime: t,
                 time: cnDateTimeStr(t),
                 hot: true,
-                text: title.trim(),
-                url: link.trim(),
+                text: title,
+                url: item.link || '',
                 source: sourceName,
                 id: ++flashIdCounter,
               });
@@ -1122,14 +1111,14 @@
           if (newItems.length > 0) {
             newItems.forEach(msg => flashMessages.unshift(msg));
             if (flashMessages.length > 30) flashMessages = flashMessages.slice(0, 30);
-            lastNewsCount = items.length;
+            lastNewsCount = currentCount;
             const newIds = new Set(flashMessages.slice(0, newItems.length).map(m => m.id));
             renderFlashes(newIds);
             renderSignals();
+            return;
           }
-        } else {
-          lastNewsCount = items.length;
         }
+        lastNewsCount = currentCount;
       } catch (err) {
         // 静默失败
       }
