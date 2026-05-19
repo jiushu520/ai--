@@ -28,9 +28,6 @@ const periods = [
   { value: '1d', label: '日线' },
 ];
 
-/**
- * K线图组件 - 完全按照index.html设计
- */
 export function Chart({ candles, signals, period, onPeriodChange }: ChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -42,7 +39,6 @@ export function Chart({ candles, signals, period, onPeriodChange }: ChartProps) 
 
     const container = chartContainerRef.current;
     const rect = container.getBoundingClientRect();
-
     const chart = createChart(container, {
       width: rect.width,
       height: 330,
@@ -89,12 +85,9 @@ export function Chart({ candles, signals, period, onPeriodChange }: ChartProps) 
     markersRef.current = createSeriesMarkers(candlestickSeries, []);
 
     const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        const newRect = chartContainerRef.current.getBoundingClientRect();
-        chartRef.current.applyOptions({
-          width: newRect.width,
-        });
-      }
+      if (!chartContainerRef.current || !chartRef.current) return;
+      const newRect = chartContainerRef.current.getBoundingClientRect();
+      chartRef.current.applyOptions({ width: newRect.width });
     };
 
     window.addEventListener('resize', handleResize);
@@ -130,48 +123,26 @@ export function Chart({ candles, signals, period, onPeriodChange }: ChartProps) 
     if (!markersRef.current) return;
 
     const currentPeriodSignals = signals.filter(s => s.period === period);
-
     const markers: SeriesMarker<Time>[] = currentPeriodSignals.map(signal => {
       const time = (new Date(signal.timestamp).getTime() / 1000) as Time;
 
-      let position: 'aboveBar' | 'belowBar';
-      let color: string;
-      let shape: 'arrowUp' | 'arrowDown';
-      let text: string;
-
       if (signal.direction === 'long') {
-        position = 'belowBar';
-        if (signal.status === 'profit') {
-          color = '#0f9f6e';
-          shape = 'arrowUp';
-          text = '买盈';
-        } else if (signal.status === 'loss') {
-          color = '#e3342f';
-          shape = 'arrowUp';
-          text = '买亏';
-        } else {
-          color = '#1769e0';
-          shape = 'arrowUp';
-          text = '买入';
-        }
-      } else {
-        position = 'aboveBar';
-        if (signal.status === 'profit') {
-          color = '#0f9f6e';
-          shape = 'arrowDown';
-          text = '卖盈';
-        } else if (signal.status === 'loss') {
-          color = '#e3342f';
-          shape = 'arrowDown';
-          text = '卖亏';
-        } else {
-          color = '#e3342f';
-          shape = 'arrowDown';
-          text = '卖出';
-        }
+        return {
+          time,
+          position: 'belowBar',
+          color: signal.status === 'loss' ? '#e3342f' : '#0f9f6e',
+          shape: 'arrowUp',
+          text: signal.status === 'pending' ? '买入' : signal.status === 'profit' ? '买盈' : '买损',
+        };
       }
 
-      return { time, position, color, shape, text };
+      return {
+        time,
+        position: 'aboveBar',
+        color: signal.status === 'profit' ? '#0f9f6e' : '#e3342f',
+        shape: 'arrowDown',
+        text: signal.status === 'pending' ? '卖出' : signal.status === 'profit' ? '卖盈' : '卖损',
+      };
     });
 
     markersRef.current.setMarkers(markers);
@@ -179,11 +150,10 @@ export function Chart({ candles, signals, period, onPeriodChange }: ChartProps) 
 
   return (
     <div className="min-h-0 flex flex-col">
-      {/* K线图标题和周期切换 - 按照index.html */}
       <div className="chart-head">
         <div>
           <strong>现货黄金蜡烛图</strong>
-          <div className="sub">可切换不同周期，当前为前端模拟行情。</div>
+          <div className="sub">当前使用免费行情源轮询生成，后续可替换为交易级 K 线。</div>
         </div>
         <div className="periods" id="periods">
           {periods.map((p) => (
@@ -199,11 +169,7 @@ export function Chart({ candles, signals, period, onPeriodChange }: ChartProps) 
         </div>
       </div>
 
-      {/* 图表容器 - 按照index.html的chart-wrap样式 */}
-      <div
-        ref={chartContainerRef}
-        className="chart-wrap"
-      />
+      <div ref={chartContainerRef} className="chart-wrap" />
     </div>
   );
 }
