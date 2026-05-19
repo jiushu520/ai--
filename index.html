@@ -1007,6 +1007,10 @@
       // 英文黄金新闻（备选）
       'https://news.google.com/rss/search?q=gold+price+XAUUSD&hl=en-US&gl=US&ceid=US%3Aen',
     ];
+    // 经济数据新闻源
+    const ECON_NEWS_RSS = 'https://news.google.com/rss/search?q=%E7%BE%8E%E5%9B%BD+%E7%BB%8F%E6%B5%8E%E6%95%B0%E6%8D%AE&hl=zh-CN&gl=CN&ceid=CN%3Azh-Hans';
+    // 美联储/央行事件新闻源
+    const FED_NEWS_RSS = 'https://news.google.com/rss/search?q=%E7%BE%8E%E8%81%94%E5%82%A8+%E5%88%A9%E7%8E%87+%E7%BB%8F%E6%B5%8E&hl=zh-CN&gl=CN&ceid=CN%3Azh-Hans';
 
     let livePrice = null; // 实时价格数据（来自API）
     let apiConnected = false;
@@ -1121,6 +1125,72 @@
         lastNewsCount = currentCount;
       } catch (err) {
         // 静默失败
+      }
+    }
+
+    // --- 解析 RSS 通用函数 ---
+    function parseRssItems(data) {
+      if (data.status !== 'ok' || !data.items) return [];
+      return data.items.slice(0, 10).map((item, i) => {
+        let t = cnNow();
+        if (item.pubDate) {
+          const p = new Date(item.pubDate);
+          if (!isNaN(p.getTime())) {
+            const utc = p.getTime() + p.getTimezoneOffset() * 60000;
+            t = new Date(utc + TZ_OFFSET * 3600000);
+          }
+        }
+        let title = item.title || '';
+        let sourceName = item.author || '';
+        const dashIdx = title.lastIndexOf(' - ');
+        if (dashIdx > 0) {
+          sourceName = title.slice(dashIdx + 3).trim();
+          title = title.slice(0, dashIdx).trim();
+        }
+        return {
+          datetime: t,
+          time: cnDateTimeStr(t),
+          hot: i < 4,
+          text: title,
+          url: item.link || '',
+          source: sourceName,
+          star: i < 3 ? '⭐⭐⭐⭐' : '⭐⭐⭐',
+          id: ++flashIdCounter,
+        };
+      }).filter(n => n.text);
+    }
+
+    // --- 获取当天重要数据新闻 ---
+    async function fetchEconNews() {
+      try {
+        const resp = await fetch(`${RSS2JSON}${encodeURIComponent(ECON_NEWS_RSS)}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const items = parseRssItems(data);
+        if (items.length > 0) {
+          currentImportantData = items;
+          renderEvents();
+          console.log('[Econ] 经济数据新闻:', items.length, '条');
+        }
+      } catch (err) {
+        console.warn('[Econ] 获取失败:', err.message);
+      }
+    }
+
+    // --- 获取当天重要事项/美联储事件新闻 ---
+    async function fetchFedNews() {
+      try {
+        const resp = await fetch(`${RSS2JSON}${encodeURIComponent(FED_NEWS_RSS)}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const items = parseRssItems(data);
+        if (items.length > 0) {
+          currentImportantEvents = items;
+          renderEvents();
+          console.log('[Fed] 美联储事件新闻:', items.length, '条');
+        }
+      } catch (err) {
+        console.warn('[Fed] 获取失败:', err.message);
       }
     }
 
@@ -1393,10 +1463,18 @@
         const time = document.createElement('div');
         time.className = 'row-time';
         time.textContent = item.time;
-        const text = document.createElement('div');
-        text.className = 'row-text';
-        text.textContent = `${item.star} ${item.text}`;
-        row.append(time, text);
+        const right = document.createElement('div');
+        const headline = item.url
+          ? (() => { const a = document.createElement('a'); a.href = item.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.className = 'news-link'; a.textContent = `${item.star} ${item.text}`; return a; })()
+          : document.createTextNode(`${item.star} ${item.text}`);
+        right.appendChild(headline);
+        if (item.source) {
+          const meta = document.createElement('div');
+          meta.className = 'news-meta';
+          meta.textContent = item.source;
+          right.appendChild(meta);
+        }
+        row.append(time, right);
         list.appendChild(row);
       });
     }
@@ -1594,6 +1672,12 @@
       fetchRealNews();
       setInterval(fetchRealNews, NEWS_FETCH_INTERVAL);
 
+      // 获取经济数据新闻和美联储事件新闻
+      fetchEconNews();
+      fetchFedNews();
+      setInterval(fetchEconNews, NEWS_FETCH_INTERVAL);
+      setInterval(fetchFedNews, NEWS_FETCH_INTERVAL);
+
       // 每4秒更新K线（微波动）
       setInterval(updateMarket, 4000);
 
@@ -1613,10 +1697,10 @@
       }
       setTimeout(pushNewFlash, 5000);
 
-      // 每10分钟刷新经济数据
+      // 每10分钟刷新经济数据和事件
       setInterval(() => {
-        currentImportantData = generateEconomicData();
-        renderEvents();
+        fetchEconNews();
+        fetchFedNews();
       }, 600000);
 
       setInterval(renderCountdown, 1000);
