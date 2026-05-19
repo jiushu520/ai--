@@ -860,9 +860,30 @@
     let currentImportantData = [];
     let currentImportantEvents = [];
 
-    function nowTimeStr() {
+    // --- UTC+8 时区工具 ---
+    const TZ_OFFSET = 8; // 中国时区 UTC+8
+    function cnNow() {
       const now = new Date();
-      return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      return new Date(utc + TZ_OFFSET * 3600000);
+    }
+    function cnTimeStr(date) {
+      const d = date || cnNow();
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    function cnDateStr() {
+      const d = cnNow();
+      return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+    }
+    function cnTimestamp(utcSeconds) {
+      // UTC时间戳 -> UTC+8 Date对象
+      const utc = new Date(utcSeconds * 1000);
+      const offset = utc.getTime() + utc.getTimezoneOffset() * 60000 + TZ_OFFSET * 3600000;
+      return new Date(offset);
+    }
+
+    function nowTimeStr() {
+      return cnTimeStr();
     }
 
     function generateFlash() {
@@ -904,7 +925,7 @@
     }
 
     function generateEvents() {
-      const now = new Date();
+      const now = cnNow();
       // 选1-2条事件，时间设在当前时间之后
       const shuffled = [...eventPool].sort(() => Math.random() - 0.5);
       const count = 1 + Math.floor(Math.random() * 2);
@@ -972,7 +993,7 @@
         const data = await resp.json();
         if (Array.isArray(data) && data.length > 0) {
           realNews = data.map(item => ({
-            time: new Date(item.datetime * 1000),
+            time: cnTimestamp(item.datetime),
             hot: item.sentiment && item.sentiment !== 'neutral',
             text: item.headline,
             url: item.url,
@@ -984,7 +1005,7 @@
           // 用真实新闻替换模拟快讯
           flashMessages = realNews.slice(0, 20).map(n => ({
             ...n,
-            time: `${String(n.time.getHours()).padStart(2, '0')}:${String(n.time.getMinutes()).padStart(2, '0')}`,
+            time: cnTimeStr(n.time),
             hot: true,
           }));
           renderFlashes();
@@ -1039,9 +1060,9 @@
           // 有新新闻，取最新的
           const newItems = data.slice(0, data.length - lastNewsCount);
           newItems.reverse().forEach(item => {
-            const t = new Date(item.datetime * 1000);
+            const t = cnTimestamp(item.datetime);
             const msg = {
-              time: `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`,
+              time: cnTimeStr(t),
               hot: true,
               text: item.headline,
               url: item.url,
@@ -1107,27 +1128,20 @@
       if (apiConnected && newsConnected) {
         pill.innerHTML = '<span class="pulse"></span>实时行情+新闻';
         pill.className = 'pill green';
-      } else if (apiConnected || newsConnected) {
-        pill.innerHTML = '<span class="pulse"></span>实时模式';
-        pill.className = 'pill green';
       } else {
-        pill.innerHTML = '<span class="pulse"></span>连接中...';
-        pill.className = 'pill amber';
+        pill.innerHTML = '<span class="pulse"></span>实时';
+        pill.className = 'pill green';
       }
     }
 
     function setToday() {
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = String(now.getMonth() + 1).padStart(2, '0');
-      const d = String(now.getDate()).padStart(2, '0');
-      $('today').textContent = `${y}/${m}/${d}`;
+      $('today').textContent = cnDateStr();
     }
 
     function buildCandles(count, seed) {
       const list = new Array(count);
       let close = seed;
-      const now = Date.now();
+      const now = cnNow().getTime();
       for (let i = count - 1; i >= 0; i -= 1) {
         const open = close + (Math.random() - 0.52) * 7;
         close = open + (Math.random() - 0.48) * 10;
@@ -1230,7 +1244,7 @@
         $('eventCountdown').textContent = '今日无更多重要事件';
         return;
       }
-      const now = new Date();
+      const now = cnNow();
       const timeStr = nextEvt.time.replace('次日', '');
       const [h, m] = timeStr.split(':').map(Number);
       const target = new Date(now);
@@ -1467,13 +1481,13 @@
         const close = livePrice.price + noise;
         const high = Math.max(open, close, livePrice.ask || close) + Math.random() * 1.5;
         const low = Math.min(open, close, livePrice.bid || close) - Math.random() * 1.5;
-        candles.push({ time: new Date(), open, high, low, close, volume: 700 + Math.random() * 1000 });
+        candles.push({ time: cnNow(), open, high, low, close, volume: 700 + Math.random() * 1000 });
       } else {
         // 无API数据时回退到模拟
         const close = Math.max(1, open + (Math.random() - 0.48) * 5.6);
         const high = Math.max(open, close) + Math.random() * 3.8;
         const low = Math.min(open, close) - Math.random() * 3.8;
-        candles.push({ time: new Date(), open, high, low, close, volume: 700 + Math.random() * 1000 });
+        candles.push({ time: cnNow(), open, high, low, close, volume: 700 + Math.random() * 1000 });
       }
       if (candles.length > 120) candles.shift();
       renderSignals();
